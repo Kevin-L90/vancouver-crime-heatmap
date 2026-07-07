@@ -81,12 +81,10 @@ async function fetchAndRender() {
   const month     = monthSelect.value;
   const crimeType = crimeTypeSelect.value;
 
-  const yearNum  = parseInt(year);
-  const monthNum = parseInt(month) || 0;
-
+  const monthNum    = parseInt(month) || 0;
   const periodLabel = monthNum
-    ? `${MONTHS[monthNum]} ${yearNum}`
-    : `${yearNum} (all months)`;
+    ? `${MONTHS[monthNum]} ${year}`
+    : `${year} (all months)`;
 
   setLoading(true, `Fetching ${periodLabel} data…`);
 

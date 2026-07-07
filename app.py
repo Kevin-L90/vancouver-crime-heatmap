@@ -134,11 +134,6 @@ def index():
     return render_template("index.html", years=AVAILABLE_YEARS, crime_types=CRIME_TYPES)
 
 
-@app.route("/api/crime-types")
-def api_crime_types():
-    return jsonify(CRIME_TYPES)
-
-
 @app.route("/api/heatmap")
 def api_heatmap():
     year = request.args.get("year", type=int)
