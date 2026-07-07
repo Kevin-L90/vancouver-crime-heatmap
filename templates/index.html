@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vancouver Crime Heatmap | VPD Open Data</title>
+  <meta name="description" content="Interactive heatmap of Vancouver crime data from the Vancouver Police Department's open data portal. Filter by year, month, and crime type." />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ─── Sidebar ─────────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="app-title">Crime Heatmap</h1>
+        <p class="app-subtitle">Vancouver, BC</p>
+      </div>
+    </div>
+    <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="sidebar-body">
+    <!-- Year selector -->
+    <div class="filter-group">
+      <label class="filter-label" for="yearSelect">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>
+        Year
+      </label>
+      <select id="yearSelect" class="filter-select">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == 2024 %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Month selector -->
+    <div class="filter-group">
+      <label class="filter-label" for="monthSelect">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><polyline points="12 7 12 12 15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Month
+      </label>
+      <select id="monthSelect" class="filter-select">
+        <option value="">All Months</option>
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+    </div>
+
+    <!-- Crime type selector -->
+    <div class="filter-group">
+      <label class="filter-label" for="crimeTypeSelect">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Crime Type
+      </label>
+      <select id="crimeTypeSelect" class="filter-select">
+        {% for ct in crime_types %}
+        <option value="{{ ct }}">{{ ct }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Apply button -->
+    <button id="applyBtn" class="apply-btn">
+      <span class="btn-text">Apply Filters</span>
+      <div class="btn-spinner" id="btnSpinner"></div>
+    </button>
+
+    <!-- Stats panel -->
+    <div class="stats-panel" id="statsPanel">
+      <div class="stats-header">
+        <svg viewBox="0 0 24 24" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Summary
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Incidents shown</span>
+        <span class="stat-value" id="statCount">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Period</span>
+        <span class="stat-value" id="statPeriod">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Crime type</span>
+        <span class="stat-value" id="statType">—</span>
+      </div>
+    </div>
+
+    <!-- Crime breakdown chart -->
+    <div class="breakdown-panel" id="breakdownPanel">
+      <div class="stats-header">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="18" y="3" width="4" height="18" rx="1" fill="currentColor"/><rect x="10" y="8" width="4" height="13" rx="1" fill="currentColor"/><rect x="2" y="13" width="4" height="8" rx="1" fill="currentColor"/></svg>
+        Crime Breakdown
+      </div>
+      <div id="breakdownList" class="breakdown-list"></div>
+    </div>
+
+    <div class="sidebar-footer">
+      <p>Data: <a href="https://geodash.vpd.ca/opendata/" target="_blank" rel="noopener">VPD GeoDASH Open Data</a></p>
+      <p>Updated weekly. Coordinates are approximate.</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── Main map area ────────────────────────────────────────────────────────── -->
+<main class="main-content">
+  <!-- Collapsed sidebar toggle -->
+  <button class="sidebar-open-btn" id="sidebarOpenBtn" title="Open filters">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Filters</span>
+  </button>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <p class="loading-text" id="loadingText">Loading crime data…</p>
+      <p class="loading-sub">Downloading from VPD open data</p>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Legend -->
+  <div class="legend" id="legend">
+    <div class="legend-title">Intensity</div>
+    <div class="legend-gradient"></div>
+    <div class="legend-labels">
+      <span>Low</span>
+      <span>High</span>
+    </div>
+  </div>
+</main>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet.heat plugin -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
