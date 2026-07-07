@@ -1,0 +1,38 @@
+{
+  "name": "Vancouver Crime Heatmap",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  // Install Python deps on container creation
+  "postCreateCommand": "pip install -r requirements.txt",
+
+  // Start the Flask dev server automatically when the Codespace opens
+  "postStartCommand": "python app.py",
+
+  // Forward port 5000 and open it in a browser tab
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": {
+      "label": "Flask App",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  // Useful VS Code extensions pre-installed in the Codespace
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.flake8",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.python"
+        }
+      }
+    }
+  }
+}
